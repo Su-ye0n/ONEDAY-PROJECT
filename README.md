@@ -1,4 +1,4 @@
-# 초개인화 소비 분석 리포트 (Toss 스타일)
+# ONEDAY_PROJECT - 초개인화 소비 분석 리포트
 
 > KB Bridge AI · Python · SQL · Pandas 원데이 프로젝트 (7인 팀)
 
