@@ -1,0 +1,11 @@
+﻿card_product,prev_month_perf_threshold,benefit_category,discount_rate,monthly_limit
+CARD_A,300000,공과금·편의점,0.1,34000
+CARD_A,500000,공과금·편의점,0.1,50000
+CARD_B,300000,통신비,0.1,10000
+CARD_B,600000,외식·커피,0.1,10000
+CARD_B,1200000,학원비,0.1,30000
+CARD_C,0,전체(무실적),0.01,50000
+CARD_D,400000,SELECT(전체),0.07,10000
+CARD_D,800000,SELECT(전체),0.07,15000
+CARD_D,1200000,SELECT(전체),0.07,80000
+CARD_E,300000,스타벅스,0.5,30000
