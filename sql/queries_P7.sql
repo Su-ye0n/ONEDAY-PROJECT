@@ -1,3 +1,4 @@
+-- [SETUP]
 DROP VIEW IF EXISTS tx_clean;
 CREATE VIEW tx_clean AS
 SELECT *
