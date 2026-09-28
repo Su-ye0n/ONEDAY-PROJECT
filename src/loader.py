@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 TRANSACTIONS_PATH = DATA_DIR / "transactions.csv"
 CARD_BENEFITS_PATH = DATA_DIR / "card_benefits.csv"
+INSTALLMENT_MONTHS_PATH = DATA_DIR / "installment_months_only.csv"
 
 # 팀 공통 기준일. README에도 같은 값을 적는다.
 DEFAULT_AS_OF = "2025-12-20"
@@ -38,12 +39,18 @@ INCOME_LABELS = ["4천만 미만", "4천~6천", "6천 이상"]
 
 
 def load_raw() -> pd.DataFrame:
-    """원본 CSV를 그대로 읽는다 (정제 전 건수 확인용)."""
+    """원본 CSV를 그대로 읽는다 (정제 전 건수 확인용). installment_months가 있으면 붙인다."""
     if not TRANSACTIONS_PATH.exists():
         raise FileNotFoundError(f"거래 데이터가 없습니다: {TRANSACTIONS_PATH}")
     df = pd.read_csv(TRANSACTIONS_PATH, dtype={"customer_id": str, "transaction_id": str})
     if df.empty:
         raise ValueError(f"거래 데이터 파일이 비어 있습니다: {TRANSACTIONS_PATH}")
+
+    if "installment_months" not in df.columns and INSTALLMENT_MONTHS_PATH.exists():
+        inst = pd.read_csv(INSTALLMENT_MONTHS_PATH, dtype={"transaction_id": str})
+        df = df.merge(inst, on="transaction_id", how="left")
+        df["installment_months"] = df["installment_months"].fillna(0).astype("int64")
+
     return df
 
 
@@ -60,7 +67,9 @@ def load_clean(as_of: str | None = None, with_category: bool = True,
     n_raw = len(raw)
 
     # 1) 중복 제거
-    key_cols = [c for c in raw.columns if c != "transaction_id"]
+    # installment_months는 transaction_id별로 나중에 붙인 파생 컬럼이라 중복 판정에서 제외한다.
+    # (원본 거래가 같아도 별도 파일에서 붙인 할부 개월 수가 서로 달라지면 중복으로 안 잡히는 문제 방지)
+    key_cols = [c for c in raw.columns if c not in ("transaction_id", "installment_months")]
     df = raw.drop_duplicates(subset=key_cols, keep="first")
     n_dup = n_raw - len(df)
 
