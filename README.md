@@ -32,7 +32,7 @@
 | P3 | 구재현 | 지출 예측 | `src/forecast.py`, `sql/queries_P3.sql`, `notebooks/forecast_P3.ipynb` |
 | P4 | 정우준 | 유사 고객군 비교 | `src/cohort.py`, `sql/queries_P4.sql`, `notebooks/cohort_P4.ipynb` |
 | P5 |  강미  | 정기결제 탐지 | `src/recurring.py`, `sql/queries_P5.sql`, `notebooks/recurring_P5.ipynb` |
-| P6 | 권지은 | 결제 캘린더 · 고정지출 예측 | `src/payment_calendar.py`, `sql/queries_P6.sql`, `notebooks/calendar_P6.ipynb` |
+| P6 | 권지은 | 할부 · 고정지출 예측 | `src/installment.py`, `sql/queries_P6.sql`, `notebooks/installment_P6.ipynb` |
 | P7 |  허준  | 카드 실적 혜택 트래커 | `src/card_tracker.py`, `sql/queries_P7.sql`, `notebooks/card_P7.ipynb` |
 
 팀원별 Commit·PR·리뷰 기록은 [CONTRIBUTION.md](CONTRIBUTION.md), AI 사용 기록은 [ai_log.md](ai_log.md)에 있습니다.
@@ -58,13 +58,15 @@
 
 ### card_benefits.csv (카드 혜택 기준표)
 
-| 코드 | 카드명 | 전월실적 구간 |
-|---|---|---|
-| CARD_A | 신한카드 Mr.Life | 30만 ~ 100만 원 |
-| CARD_B | KB국민카드 굿데이카드 | 30만 ~ 120만 원 |
-| CARD_C | 하나카드 MOVING카드 ALLDAY모드 | 실적 조건 없음 |
-| CARD_D | 삼성카드 삼성 iD SELECT ALL 카드 | 40만 ~ 120만 원 |
-| CARD_E | NH농협카드 올바른 FLEX 카드 | 30만 원 |
+카드마다 전월 실적 구간(티어)별로 혜택 카테고리·할인율·월 한도가 다릅니다.
+
+| 카드 | 실적 구간(티어) | 혜택 카테고리 | 할인율 | 월 한도 |
+|---|---|---|---|---|
+| CARD_A | 30만 원 / 50만 원 | 공과금·편의점 | 10% | 3만 4천 원 / 5만 원 |
+| CARD_B | 30만 / 60만 / 120만 원 | 통신비 / 외식·커피 / 학원비 | 10% | 1만 / 1만 / 3만 원 |
+| CARD_C | 실적 조건 없음 | 전체 | 1% | 5만 원 |
+| CARD_D | 40만 / 80만 / 120만 원 | SELECT(전체) | 7% | 1만 / 1만 5천 / 8만 원 |
+| CARD_E | 30만 원 | 스타벅스 | 50% | 3만 원 |
 
 (작성 필요: 혜택 조건 출처. 예) 각 카드사 공개 상품설명서를 참고해 단순화했으며 실제 상품 조건과 다를 수 있음)
 
@@ -89,7 +91,7 @@ ONEDAY-PROJECT/
 ├── README.md  CONTRIBUTION.md  ai_log.md  result_report.md  requirements.txt
 ├── data/        transactions.csv, card_benefits.csv
 ├── src/         loader.py, classify.py, change.py, forecast.py, cohort.py,
-│                recurring.py, payment_calendar.py, card_tracker.py
+│                recurring.py, installment.py, card_tracker.py
 ├── sql/         queries_P2.sql ~ queries_P7.sql, queries.sql (통합본)
 ├── notebooks/   파트별 분석 노트북, analysis.ipynb (통합본)
 ├── results/     pandas/ (분석 결과 CSV), figures/ (차트)
@@ -115,8 +117,9 @@ pip install -r requirements.txt
 python src/loader.py
 # → 원본 318,145행 → 중복 943 제거 → 취소 6,403 제외 → 310,799행
 
-# 3) 고객 1명 리포트 생성
+# 3) 고객 1명 리포트 생성 (기본값: 고객 C0003, 2025-12)
 python report.py
+python report.py C0010 2025-11   # 고객·월 직접 지정
 
 # 4) 파트별 분석·검증: notebooks/ 의 각 노트북을 Run All
 ```
@@ -135,17 +138,19 @@ df = load_clean(as_of="2025-12-20")    # 기준일까지
 
 ### 리포트 예시 (고객 C0003, 2025년 12월)
 
-> **소비 변화** 이번 달 총 80만 7천 원 썼어요. 최근 3개월 평균보다 6% 적어요.
-> - 이번 달 식비 지출이 최근 3개월 평균보다 286% 늘었어요 (+43만 원).
-> - 이번 달 쇼핑 지출이 최근 3개월 평균보다 100% 줄었어요 (-30만 원). 잘하고 있어요!
->
-> **정기결제** 매달 나가는 정기결제 5개, 월 78,390원이에요. (LG유플러스, 넷플릭스, 밀리의서재, 쿠팡와우, 티빙)
->
-> **카드 실적** D카드 SELECT 7% 할인까지 24만 9,900원 남았어요. 이번 주 외식은 D카드로 결제하세요.
+`python report.py` 실행 결과 그대로입니다 (근거는 [result_report.md](result_report.md) 참고).
+
+> **소비 변화** 이번 달 쇼핑 지출이 최근 3개월 평균보다 100% 줄었어요 (-30만 원). 잘하고 있어요!
 >
 > **지출 예측** 이 속도면 12월에 87만 2천 원을 쓰게 돼요. 지난달보다 22만 7천 원 적어요. 다음 달에는 쇼핑에 30만 원 정도 쓸 것으로 보여요.
 >
-> **또래 비교** (P4 결과 작성 필요)
+> **또래 비교** 비슷한 20대 남성 학생(4천만 미만) 고객보다 식비에 35만 2천 원 더 썼어요.
+>
+> **정기결제** 매달 나가는 정기결제 3개, 월 3만 8천 원이에요. (넷플릭스, 쿠팡와우, 티빙)
+>
+> **다음 달 예정 지출** 이 고객은 12/20 기준 진행 중인 할부가 없어요. (할부가 있는 고객 예시는 result_report.md 참고)
+>
+> **카드 실적** D카드 SELECT 7% 할인까지 24만 9,900원 남았어요. 이번 주 외식은 D카드로 결제하세요.
 
 ### 파트별 결과
 
@@ -167,6 +172,7 @@ df = load_clean(as_of="2025-12-20")    # 기준일까지
 
 - 할부 거래마다 월 납입액(결제금액 ÷ 할부 개월 수), 납부한 회차, 남은 회차, 남은 할부금, 다음 달 납입액을 계산합니다.
 - 고객별로 다음 달 할부 납입 예정액과 남은 할부금 총액을 집계하고, 다음 달에 끝나는 할부를 따로 알려줍니다.
+- `data/installment_months_only.csv`(transaction_id별 할부 개월 수)가 채워지면서 실제 데이터로 검증했습니다. 전체 할부 거래 2,542건(일시불 제외) 중 2·3·6·12개월이 각각 990·745·517·290건입니다.
 
 
 **P3 지출 예측**
@@ -176,7 +182,9 @@ df = load_clean(as_of="2025-12-20")    # 기준일까지
 - 테스트된 9개월 모두 단순 이동평균이 가중 이동평균보다 우수한 성능을 보여, 최종 예측 모델로 단순 이동평균(SMA)을 채택했습니다.  
 
 
-** P4 유사 고객군 비교: (작성 필요)**
+**P4 유사 고객군 비교**
+- 코호트: age_group × gender × occupation × 소득구간(4천만 미만/4천~6천/6천 이상). 최소 인원 20명 미만이면 1단계로 소득구간을, 그래도 미달이면 직업까지 제거해 상위 코호트로 대체합니다.
+- 고객의 이번 달 대분류별 지출 − 코호트 중앙값 차이가 가장 큰 대분류 하나를 문구로 뽑습니다. 무작위 고객·월 40건 샘플에서 코호트 1단계(4개 조건 모두 충족)로 배정된 비율은 50%, 2단계 20%, 3단계 30%였습니다.
 
 ---
 
@@ -190,9 +198,9 @@ df = load_clean(as_of="2025-12-20")    # 기준일까지
 | P5 | 정기결제 탐지 조합 | SQL 2,664 = Python 2,664, 불일치 0건 |
 | P7 | 고객×카드 실적 금액·건수 4,996행 | 불일치 0건 |
 | P7 | 부족액 계산 (3,683행) | 불일치 0건 |
-| P6 |	납부 회차, 남은 회차, 남은 할부금, 다음 달 납입액 | SQL·Python 로직 일치 확인 (테스트 데이터 1,423건 차이 0). 실제 데이터 결과 작성 필요 |
+| P6 |	납부 회차, 남은 회차, 남은 할부금, 다음 달 납입액 (기준월 2025-09) | 실제 데이터 1,808건 전부 일치 (paid_months·remaining_months·remaining_amount 불일치 0건) |
 | P3 | 다음 달 예측 SMA·WMA 금액, 전체 백테스트 MAE, 이번 달 말 예상 지출 | SQL과 Python 로직 100% 일치 (12개 대분류 예측 최대 차이 0.0, SMA 백테스트 MAE 114,815 / WMA 116,475 정확히 일치, 예상 지출 872,411원 일치) |
-| P4 | (작성 필요) | |
+| P4 | 코호트 단계, 또래 인원, 대분류별 my_spend·peer_mean·peer_median·diff_from_median | 무작위 고객×월 40건에서 SQL·Python 불일치 0건 |
 
 ---
 
@@ -202,7 +210,8 @@ df = load_clean(as_of="2025-12-20")    # 기준일까지
 - 2025년 1년치만 있어 전년 동월 비교(계절성 반영)는 할 수 없습니다.
 - 정기결제 데이터가 매우 규칙적(금액 변동 없음)이라 탐지가 쉬운 편입니다. 해지·가격 인상 같은 변화 감지는 이번 범위에서 제외했습니다.
 - 모든 고객이 카드 5장을 모두 사용하도록 생성되어 카드별 실적이 분산됩니다.
-- 할부는 데이터에 정보가 없어 이번 범위에서 제외했습니다.
+- **할부(P6)**: `data/installment_months_only.csv`(transaction_id별 할부 개월 수)를 `loader.load_clean()`이 자동으로 붙여 실제 데이터로 동작·검증합니다. 원본 파일이 transaction_id 단위라 거래 중복 판정 시에는 이 컬럼을 제외합니다(같은 거래인데 할부 개월 수만 달라서 중복으로 안 잡히는 것을 방지).
+- **카드 실적(P7)**: `data/card_benefits.csv`는 채워졌지만, `src/card_tracker.py`는 여전히 미리 계산해 둔 `results/pandas/p7_card_alerts_2025-12.csv`만 읽습니다. 이 결과 파일을 만드는 P7의 Pandas 계산 코드(노트북)가 저장소에 없어서, 2025년 12월 외 다른 달을 조회하면 카드 실적 카드만 오류로 표시되고 나머지 카드는 정상 출력됩니다. 다른 월도 보려면 `card_benefits.csv`를 이용해 해당 월의 `p7_card_alerts_<월>.csv`를 만드는 코드가 필요합니다.
 
 ---
 
