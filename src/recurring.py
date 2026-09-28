@@ -1,6 +1,16 @@
 import pandas as pd
 
 
+def _won(n: float) -> str:
+    """금액을 '15만 2천 원' 형식으로 표시"""
+    n = int(round(abs(n)))
+    if n < 10_000:
+        return f"{n:,}원"
+    man, rest = divmod(n, 10_000)
+    chun = rest // 1_000
+    return f"{man:,}만 {chun}천 원" if chun else f"{man:,}만 원"
+
+
 def detect_recurring(df: pd.DataFrame) -> pd.DataFrame:
     """
     전체 거래내역에서 정기결제 후보를 탐지한다.
@@ -122,12 +132,23 @@ def analyze(
         item["amount"] for item in recurring_list
     )
 
+    if recurring_list:
+        names = ", ".join(item["merchant_name"] for item in recurring_list[:5])
+        message = f"매달 나가는 정기결제 {len(recurring_list)}개, 월 {_won(total_amount)}이에요. ({names})"
+    else:
+        message = f"{month}에는 탐지된 정기결제가 없어요."
+
     return {
-        "customer_id": customer_id,
-        "month": month,
-        "recurring_count": len(recurring_list),
-        "recurring_total": total_amount,
-        "recurring_list": recurring_list,
+        "feature": "recurring",
+        "title": "정기결제",
+        "message": message,
+        "data": {
+            "customer_id": customer_id,
+            "month": month,
+            "recurring_count": len(recurring_list),
+            "recurring_total": total_amount,
+            "recurring_list": recurring_list,
+        },
     }
 
 
